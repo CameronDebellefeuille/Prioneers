@@ -18,10 +18,7 @@ from pathlib import Path # cross-platform filesystem path handling
 import pandas as pd # tabular data handling (DataFrames) and Excel output
 import requests # makes the HTTP calls to the UniProt REST API
 
-# te_plaac_pipeline.py lives one level up (repo root); running this script
-# directly only puts its own directory on sys.path, so add the repo root too.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from te_plaac_pipeline import run_plaac, _parse_plaac_tsv, setup_logging # local pipeline: runs PLAAC, parses its TSV output, configures logging
+from plaac_utils import run_plaac, _parse_plaac_tsv, setup_logging # runs PLAAC, parses its TSV output, configures logging
 
 log = logging.getLogger(__name__)
 
@@ -48,19 +45,16 @@ TE_PFAM_DOMAINS = {
 }
 
 # All paths are anchored to this file's location (not the working directory)
-# so the script behaves the same whether it's run from the repo root or from
-# inside updated_pipeline/. Output goes under updated_pipeline/data/; the
-# PLAAC jar/R script are shared resources that stay in the repo-root tools/.
+# so the script behaves the same regardless of the caller's cwd.
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-REPO_ROOT = BASE_DIR.parent
 
 CONFIG = {
     "cache_dir": str(DATA_DIR / "bulk_cache"),
     "fasta_dir": str(DATA_DIR / "bulk_fasta"),
     "plaac_output_dir": str(DATA_DIR / "bulk_plaac_output"),
-    "plaac_jar": str(REPO_ROOT / "tools" / "plaac" / "plaac.jar"),
-    "plaac_plot_r": str(REPO_ROOT / "tools" / "plaac" / "R" / "plaac_plot.r"),
+    "plaac_jar": str(BASE_DIR / "tools" / "plaac" / "plaac.jar"),
+    "plaac_plot_r": str(BASE_DIR / "tools" / "plaac" / "R" / "plaac_plot.r"),
     "results_dir": str(DATA_DIR / "results"),
     "prld_plots_dir": str(DATA_DIR / "results" / "plots_prld_positive"),
     "alpha": 0.5,

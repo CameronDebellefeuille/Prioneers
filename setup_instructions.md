@@ -12,59 +12,20 @@ Verify: `java -version`
 
 ---
 
-## 2. PLAAC jar + R scripts
+## 2. R + Rscript (required for plots)
 
-Download the latest release from https://github.com/whitehead/plaac/releases
-
-You need:
-- `plaac.jar`
-- `R/plaac_plot.r`
-- `R/plaac_plot_util.r`
-
-Place them in this layout inside the repo:
-```
-tools/
-└── plaac/
-    ├── plaac.jar
-    └── R/
-        ├── plaac_plot.r
-        └── plaac_plot_util.r
-```
-
----
-
-## 3. R + Rscript (required for plots)
-
-Download R from https://cran.r-project.org/bin/windows/base/
-
-After installing, open R or RScript and run:
-```r
-install.packages(c("DBI", "RSQLite"))
-```
+Download R from https://cran.r-project.org/bin/windows/base/ (or your OS's
+package manager). The bundled plotting scripts (`tools/plaac/R/`) use only
+base R — no extra packages to install.
 
 Verify: `Rscript --version`
 
+If `Rscript` isn't on your `PATH`, set the `RSCRIPT_PATH` environment variable
+to its full path instead of relying on `PATH` — see the README for details.
+
 ---
 
-## 4. Conda environment with Python dependencies
-
-### 4a. Install Miniconda (if not already installed)
-
-In PowerShell (per-user install, no admin needed):
-```powershell
-winget install --id Anaconda.Miniconda3 -e --source winget
-```
-Then close and reopen your terminal so `conda` is on PATH. If `conda` still isn't found, run:
-```powershell
-& "$env:USERPROFILE\miniconda3\Scripts\conda.exe" init powershell
-```
-and restart the shell.
-
-### 4b. Create the `prioneers` environment
-EMBOSS is not available via bioconda on native Windows, so the environment only
-needs Python + Biopython. The pipeline detects this automatically and falls back
-to its built-in Biopython ORF finder (`_run_getorf` in `te_plaac_pipeline.py`)
-instead of calling `getorf`.
+## 3. Python dependencies (conda)
 
 ```bash
 conda create -n prioneers python=3.11 -y
@@ -72,19 +33,9 @@ conda activate prioneers
 pip install -r requirements.txt
 ```
 
-### 4c. Run the pipeline inside the environment
-```bash
-conda activate prioneers
-python te_plaac_pipeline.py
-```
-
-Or use the `--conda-env prioneers` flag if calling from outside the environment.
-On Windows, the `--conda-env` flag mainly just needs the env to exist with
-Biopython installed — `getorf` is optional and will be skipped if missing.
-
 ---
 
-## 5. Quick-check all dependencies
+## 4. Quick-check all dependencies
 
 ```bash
 java -version
@@ -93,3 +44,6 @@ conda activate prioneers && python -c "import Bio, requests, pandas; print('Pyth
 ```
 
 All three should print version strings without errors.
+
+PLAAC itself (`tools/plaac/plaac.jar` and its R scripts) is already bundled in
+this repo — no separate download needed.

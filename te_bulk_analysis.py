@@ -9,17 +9,12 @@ once the control-set pull is reimplemented.
 
 import argparse
 import logging
-import sys
 from pathlib import Path
 
 import pandas as pd
 
 from te_bulk_pull import CONFIG
-
-# te_plaac_pipeline.py lives one level up (repo root); add it explicitly so
-# this still works no matter which script imports it first.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from te_plaac_pipeline import run_plaac_plots, setup_logging
+from plaac_utils import run_plaac_plots, setup_logging
 
 log = logging.getLogger(__name__)
 

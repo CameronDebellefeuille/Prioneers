@@ -81,11 +81,10 @@ that scoring (both set in `CONFIG` in `te_bulk_pull.py`, overridable via
 `--alpha` on the CLI):
 
 - **`alpha = 0.5`** — blends the background amino acid distribution PLAAC
-  scores against. `alpha=1` uses the background composition of the actual
-  input FASTA (fully dataset-specific); `alpha=0` uses a fixed generic
-  background, ignoring the input's own composition. Some organisms/datasets
+  scores against. `alpha=1` uses the S. cerevisiae amino acid background frequencies;
+  `alpha=0` uses the frequencies of the organisms being scored. Some organisms/datasets
   have unusual compositional bias (e.g. low-complexity-rich proteomes) that
-  would inflate false positives at `alpha=1`, so PLAAC's authors recommend
+  would inflate false positives at `alpha=1`, so I used
   `0.5` as a balanced default rather than either extreme. PLAAC's own
   documentation suggests re-checking PRD calls at `alpha=0.0` and `alpha=1.0`
   for stability if you need confidence in a specific result — pass

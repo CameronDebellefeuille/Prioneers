@@ -73,7 +73,7 @@ run with `--help` for the full list.
 This is the part of the pipeline most worth understanding before trusting the
 numbers it produces.
 
-### PLAAC parameters
+### PLAAC parameters - http://plaac.wi.mit.edu/
 
 PLAAC scores a protein by comparing its amino acid composition against a
 prion-like HMM trained on known yeast prion domains. Two parameters control

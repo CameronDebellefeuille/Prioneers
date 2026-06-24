@@ -68,6 +68,82 @@ python te_bulk_analysis.py --verbose
 Both scripts also accept `--alpha`, `--seed`, `--dry-run`, and `--verbose`;
 run with `--help` for the full list.
 
+## Methodology
+
+This is the part of the pipeline most worth understanding before trusting the
+numbers it produces.
+
+### PLAAC parameters
+
+PLAAC scores a protein by comparing its amino acid composition against a
+prion-like HMM trained on known yeast prion domains. Two parameters control
+that scoring (both set in `CONFIG` in `te_bulk_pull.py`, overridable via
+`--alpha` on the CLI):
+
+- **`alpha = 0.5`** — blends the background amino acid distribution PLAAC
+  scores against. `alpha=1` uses the background composition of the actual
+  input FASTA (fully dataset-specific); `alpha=0` uses a fixed generic
+  background, ignoring the input's own composition. Some organisms/datasets
+  have unusual compositional bias (e.g. low-complexity-rich proteomes) that
+  would inflate false positives at `alpha=1`, so PLAAC's authors recommend
+  `0.5` as a balanced default rather than either extreme. PLAAC's own
+  documentation suggests re-checking PRD calls at `alpha=0.0` and `alpha=1.0`
+  for stability if you need confidence in a specific result — pass
+  `--alpha 0.0` / `--alpha 1.0` as separate runs to do that.
+- **`core_length = 60`** — the minimum contiguous "core" window (in
+  residues) PLAAC's Viterbi parse must find before it will call a region a
+  prion-like domain (PRD), passed as PLAAC's `-c` flag.
+
+A protein counts as PrLD-positive (`prd_called = 1`) when PLAAC's own output
+reports `PRDlen > 0` — i.e. PLAAC's HMM actually found a qualifying domain,
+not just a nonzero score.
+
+### Pfam domains searched
+
+`te_bulk_pull.py` queries UniProt for proteins annotated with one of 6
+TE-associated Pfam domains (`TE_PFAM_DOMAINS` in the script):
+
+| Pfam ID | Label | Domain |
+|---|---|---|
+| PF03732 | Gag | Retrotrans_gag — Gag (LTR retrotransposon/endogenous retrovirus capsid) |
+| PF00078 | RT | RVT_1 — reverse transcriptase (LINE/LTR retrotransposons) |
+| PF00665 | Integrase | rve — integrase core domain (LTR retrotransposons) |
+| PF03004 | Transposase_DDE | DDE_Tnp_1 — Mutator/En-Spm-like DNA transposase |
+| PF01498 | Transposase_IS4 | Transposase_8 — IS4/hAT-like DNA transposase |
+| PF03108 | Transposase_MULE | MULE — MuDR/Foldback-like DNA transposase |
+
+Each was spot-checked against the UniProt API to confirm it returns real TE
+proteins rather than an unrelated gene family sharing the same domain name.
+No reliable Pfam domain exists specifically for Helitron Rep/helicase
+(candidates like PF14214 returned 0 UniProt hits), so Helitrons are
+under-represented in this search.
+
+UniProt queries are additionally constrained to `length:[50 TO 3000]`
+(`min_len`/`max_len` in `CONFIG`) to exclude short fragments and unusually
+long multi-domain outliers before sequences ever reach PLAAC.
+
+### Pool, fetch, and random selection
+
+The protein set per domain isn't just "the first N UniProt hits" — that
+would bias toward whatever UniProt's default sort order favors (e.g.
+well-annotated model organisms). Instead:
+
+1. For each Pfam domain, fetch a **pool** of up to `--fetch-pool` (default
+   500) matching UniProt entries and cache it to
+   `data/bulk_cache/te_<PFAM_ID>.json`.
+2. Randomly subsample `--per-domain` (default 100) proteins from that pool
+   using a seeded RNG (`--seed`, default 42), so results are reproducible
+   across runs as long as the cached pool and seed don't change.
+3. After combining all domains' samples, drop any duplicate UniProt
+   accessions (a protein can carry more than one TE-associated domain, e.g.
+   a Gag-Pol polyprotein, and get pulled by two separate domain queries).
+
+Re-running with `--skip-fetch` reuses the cached pool with no network calls;
+the sample drawn from it is identical given the same seed. Re-running
+without `--skip-fetch` re-fetches each domain's pool fresh from UniProt, so
+the sample can change if UniProt's matching set has changed since the cache
+was written.
+
 ## Notes
 
 - Pipeline outputs (Excel files, PLAAC TSVs, PNG plots, UniProt JSON caches

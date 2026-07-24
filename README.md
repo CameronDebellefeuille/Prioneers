@@ -5,14 +5,14 @@ Screens transposable element (TE)-encoded proteins for prion-like domains
 from UniProt by Pfam domain, score them with PLAAC, and report PrLD-positive
 rates.
 
-This project has gone through two "pull" strategies and a side benchmark as
+This project has gone through two "pull" strategies as
 the questions changed. This README walks through them in the order they were
 built, since each stage's result is what motivated the next one.
 
 ## Current status
 
-- Two pipelines coexist and are both still relevant: **bulk** (bounded random
-  sample across 6 scattered TE-associated Pfam domains) and **clan** (full
+- Two pipelines coexist and are both still relevant: **bulk** (random
+  sample across 6 TE-associated Pfam domains) and **clan** (full
   population of one coherent Pfam clan, CL0523). They answer different
   questions — see Stages 1 and 3.
 - **No non-TE control-set comparison exists yet.** Every PrLD rate reported so

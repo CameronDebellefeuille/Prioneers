@@ -187,6 +187,8 @@ source.
 **PLAAC parameters** (`CONFIG` in `te_bulk_pull.py`, overridable via
 `--alpha`):
 
+PLAAC itself: http://plaac.wi.mit.edu/
+
 - `alpha = 0.5` — blends the background amino-acid distribution PLAAC scores
   against. `alpha=0` uses the input FASTA's own composition as background
   (dataset-specific, unstable on small inputs); `alpha=1` uses a fixed,

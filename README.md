@@ -227,3 +227,10 @@ exclude fragments and multi-domain outliers before PLAAC.
 - **`clan_cl0523_bacterial_gag_hits.csv`** was produced by an ad hoc local
   filter, not a checked-in script — see Stage 3 for the exact filter to
   reproduce it.
+
+## AI disclaimer
+
+Claude Code was used as an engineering-assistance tool during development —
+e.g. refactoring, repo cleanup, and drafting/editing this README — under my
+direction. All experimental design, biological interpretation, and
+conclusions are my own.

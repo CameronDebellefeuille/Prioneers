@@ -148,10 +148,17 @@ than shown as a spurious 0%/100%.
 
 **Interpretation:** this is the current best-supported taxon-level view of
 PrLD rate for this clan; see `data/results/clan_cl0523_taxon_prld_heatmap*.png`
-after running the three stages above. Note: `clan_cl0523_bacterial_gag_hits.csv`
-in `data/results/` is a follow-up query with no corresponding script in this
-repo (done ad hoc) — reproduce or document it before relying on it in a
-write-up.
+after running the three stages above.
+
+`data/results/clan_cl0523_bacterial_gag_hits.csv` is a follow-up sanity check,
+done ad hoc in a local Python/pandas shell (not saved as a script): the
+rescored, cluster-annotated clan table filtered to rows where
+`broad_group` is `Bacillati` or `Pseudomonadati` (bacterial) and `domain` is
+one of the `te_capsid` group (e.g. PEG10_N-capsid) — i.e. bacterial hits for
+a domain family that should be eukaryotic viral/TE in origin. Worth checking
+whether these are contamination, horizontal gene transfer, or UniProt
+misannotation before citing anything from this file; reproduce the filter
+above from `clan_cl0523_proteins_plaac_clustered.csv` if you need it again.
 
 ## Stage 4 — Standalone prion benchmark
 
@@ -215,5 +222,6 @@ exclude fragments and multi-domain outliers before PLAAC.
   domain in UniProt).
 - **EVD (ATCOPIA93)** protein sequence is unresolved and parked (Stage 4) —
   maps to TAIR locus AT5G17125, no UniProt entry, no annotated CDS.
-- **`clan_cl0523_bacterial_gag_hits.csv`** has no generating script checked
-  into this repo.
+- **`clan_cl0523_bacterial_gag_hits.csv`** was produced by an ad hoc local
+  filter, not a checked-in script — see Stage 3 for the exact filter to
+  reproduce it.

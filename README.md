@@ -230,7 +230,8 @@ exclude fragments and multi-domain outliers before PLAAC.
 
 ## AI disclaimer
 
-Claude Code was used as an engineering-assistance tool during development —
-e.g. refactoring, repo cleanup, and drafting/editing this README — under my
-direction. All experimental design, biological interpretation, and
+Claude Code was used throughout this project's development, including
+drafting and iterating on analysis scripts, repo cleanup, and this README.
+Every script, parameter choice, and result was reviewed, tested, and revised
+by me, and all experimental design, biological interpretation, and
 conclusions are my own.

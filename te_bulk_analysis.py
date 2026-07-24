@@ -54,25 +54,33 @@ def main() -> None:
         description="Analyze the bulk-pull Excel output: TE-only per-domain "
                     "PrLD breakdown and PLAAC per-residue plots."
     )
-    parser.add_argument("--xlsx", default=str(Path(CONFIG["results_dir"]) / "bulk_proteins.xlsx"))
-    parser.add_argument("--fasta", default=str(Path(CONFIG["fasta_dir"]) / "bulk_combined.fasta"))
+    parser.add_argument("--out-tag", default="bulk",
+                        help="Filename prefix matching the te_bulk_pull.py run to analyze")
+    parser.add_argument("--xlsx", default=None,
+                        help="Defaults to {results_dir}/{out-tag}_proteins.xlsx")
+    parser.add_argument("--fasta", default=None,
+                        help="Defaults to {fasta_dir}/{out-tag}_combined.fasta")
     parser.add_argument("--alpha", type=float, default=CONFIG["alpha"])
     parser.add_argument("--results-dir", default=CONFIG["results_dir"])
-    parser.add_argument("--prld-plots-dir", default=CONFIG["prld_plots_dir"])
+    parser.add_argument("--prld-plots-dir", default=None,
+                        help="Defaults to {prld_plots_dir}_{out-tag}")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+    xlsx_path = args.xlsx or str(Path(CONFIG["results_dir"]) / f"{args.out_tag}_proteins.xlsx")
+    fasta_path = args.fasta or str(Path(CONFIG["fasta_dir"]) / f"{args.out_tag}_combined.fasta")
+    prld_plots_dir = args.prld_plots_dir or f"{CONFIG['prld_plots_dir']}_{args.out_tag}"
 
     setup_logging(args.verbose)
     log.info("=== TE bulk-pull analysis starting ===")
 
-    df = load_proteins(args.xlsx)
+    df = load_proteins(xlsx_path)
 
     per_domain = per_domain_breakdown(df)
     Path(args.results_dir).mkdir(parents=True, exist_ok=True)
-    per_domain.to_csv(Path(args.results_dir) / "per_domain_breakdown.csv", index=False)
+    per_domain.to_csv(Path(args.results_dir) / f"{args.out_tag}_per_domain_breakdown.csv", index=False)
 
-    plot_prd_positive(df, args.fasta, args.alpha, CONFIG["core_length"],
-                      args.prld_plots_dir, CONFIG["rscript"])
+    plot_prd_positive(df, fasta_path, args.alpha, CONFIG["core_length"],
+                      prld_plots_dir, CONFIG["rscript"])
 
 
 if __name__ == "__main__":

@@ -5,4 +5,10 @@ __pycache__/
 data/bulk_cache/
 data/bulk_fasta/
 data/bulk_plaac_output/
+data/clan_cache/
+data/clan_fasta/
+data/clan_plaac_output/
+data/prion_cache/
+data/prion_fasta/
+data/prion_plaac_output/
 data/results/

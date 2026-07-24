@@ -27,9 +27,18 @@ def setup_logging(verbose: bool) -> None:
 
 
 def run_plaac(fasta_path: str, plaac_jar: str, alpha: float,
-              core_length: int, output_dir: str, dry_run: bool = False) -> str | None:
+              core_length: int, output_dir: str, dry_run: bool = False,
+              timeout: int = 300, heap: str | None = None) -> str | None:
     """
     Run PLAAC on a protein FASTA. Returns path to output TSV, or None on failure.
+
+    `timeout` (seconds) defaults to 300, fine for the small bulk-pull runs this
+    was originally written for, but must be raised explicitly for large inputs
+    (e.g. the ~155k-protein clan rescore) — PLAAC gives no progress output, so
+    there's no way to tell a slow run apart from a hung one except this bound.
+    `heap` (e.g. "4g") sets the JVM's -Xmx explicitly instead of relying on
+    Java's default (usually 1/4 of physical RAM), so runs are reproducible
+    across machines with different amounts of RAM.
     """
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     alpha_tag = str(alpha).replace(".", "p")
@@ -40,8 +49,11 @@ def run_plaac(fasta_path: str, plaac_jar: str, alpha: float,
         log.error("plaac.jar not found at %s — see setup_instructions.md", plaac_jar)
         return None
 
-    cmd = [
-        "java", "-jar", str(jar),
+    cmd = ["java"]
+    if heap:
+        cmd.append(f"-Xmx{heap}")
+    cmd += [
+        "-jar", str(jar),
         "-i", fasta_path,
         "-a", str(alpha),
         "-c", str(core_length),
@@ -54,7 +66,7 @@ def run_plaac(fasta_path: str, plaac_jar: str, alpha: float,
 
     try:
         with open(out_tsv, "w") as f_out, open(out_tsv.replace(".tsv", ".err"), "w") as f_err:
-            result = subprocess.run(cmd, stdout=f_out, stderr=f_err, timeout=300)
+            result = subprocess.run(cmd, stdout=f_out, stderr=f_err, timeout=timeout)
         if result.returncode != 0:
             log.error("PLAAC exited with code %d — check %s", result.returncode,
                       out_tsv.replace(".tsv", ".err"))
@@ -63,7 +75,7 @@ def run_plaac(fasta_path: str, plaac_jar: str, alpha: float,
         log.error("'java' not found. Install Java JRE — see setup_instructions.md")
         return None
     except subprocess.TimeoutExpired:
-        log.error("PLAAC timed out after 5 minutes")
+        log.error("PLAAC timed out after %ds", timeout)
         return None
 
     log.info("PLAAC output written to %s", out_tsv)

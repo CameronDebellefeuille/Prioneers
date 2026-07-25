@@ -59,74 +59,38 @@ checked into version control.
 
 ## Stage 1 — Bulk pull
 
-*Question: are TE-encoded proteins in general enriched for PrLDs, and does
-that vary by TE-associated Pfam domain?*
-
-For each of 6 TE-associated Pfam domains (Gag, RT, Integrase, and three DDE
-transposase families — see `TE_PFAM_DOMAINS` in `te_bulk_pull.py`), fetch a
-pool of up to `--fetch-pool` (default 500) matching UniProt entries, cache
-it, then randomly subsample `--per-domain` (default 100) proteins per domain
-using a seeded RNG so results are reproducible. Score every sampled protein
-with PLAAC (`alpha=0.5`, `core_length=60`; see [Methodology](#methodology)).
-`te_bulk_pull.py` also supports a second domain set restricted to
-cut-and-paste DNA-transposon families (`--domain-set dna_transposon`) and an
-`--organism` filter to hold organism constant instead of sampling across
-taxonomy.
+Randomly samples proteins across 6 scattered TE-associated Pfam domains
+(Gag, RT, Integrase, three DDE transposase families) from UniProt and scores
+them with PLAAC to get a PrLD-positive rate per domain.
 
 ```bash
 python te_bulk_pull.py --skip-fetch --per-domain 100 --verbose
 python te_bulk_analysis.py --verbose
 ```
 
-**Interpretation / pivot:** a DNA-transposon-only, *Arabidopsis thaliana*-only
-run (`--domain-set dna_transposon --organism "Arabidopsis thaliana"`) found
-CACTA's PrLD-positive rate (12.0%) sharply elevated over MULE (1.6%), hAT
-(1.0%), and PIF/Harbinger (0%) — Fisher's exact p≈4e-6. That result is not yet
-trustworthy (see [Open questions](#open-questions)), but the bounded,
-scattered-domain sampling design also made two other things hard to answer:
-whether taxonomic composition was confounding domain-level rates (→ Stage 2),
-and whether a random *subsample* was even the right unit when the underlying
-UniProt population per domain is small and unevenly distributed across taxa
-(→ Stage 3's full-population pivot).
+**Interpretation / pivot:** a DNA-transposon, *A. thaliana*-only run found
+CACTA's rate sharply elevated (12.0% vs. ≤1.6% for other families, p≈4e-6),
+but the bounded, scattered-domain design couldn't rule out taxonomic
+confounding or paralog pseudoreplication — motivating Stages 2 and 3.
 
 ## Stage 2 — Taxon add-on
 
-*Question: is the Stage 1 per-domain PrLD rate actually a taxonomy effect in
-disguise (e.g. one domain happens to be sampled mostly from Plants, another
-mostly from Fungi)?*
-
-`te_taxon_analysis.py` reads the Stage 1 Excel output, looks up each
-accession's NCBI/UniProt lineage, classifies it into a broad group
-(Plant/Animal/Fungi/Virus/...) and, for animals, a finer subgroup, and writes
-taxonomic composition, a domain×taxon crosstab, PrLD rate by taxon, and mean
-protein length by domain (a second confound check).
+Adds NCBI/UniProt taxonomic lineage to the Stage 1 output to check whether
+per-domain PrLD rates are actually a taxonomy effect in disguise.
 
 ```bash
 python te_taxon_analysis.py --verbose
 ```
 
-**Interpretation / pivot:** confirmed the bulk sample's taxonomic composition
-is uneven across domains — a real confound, not just a sampling curiosity.
-Fixing it by re-sampling within the same bounded-random design would still
-leave small, unevenly-populated domain/taxon cells. That's what motivated
-Stage 3: pull every matching UniProt entry for a domain family instead of a
-capped random sample, so taxon-level cells have real population sizes to
-report rates from (and can be masked when they don't).
+**Interpretation / pivot:** confirmed a real taxonomic confound with small,
+unevenly-populated domain×taxon cells — motivating Stage 3's full-population
+pull instead of a bounded random sample.
 
 ## Stage 3 — Clan pipeline pivot
 
-*Question: for one coherent, well-populated Pfam clan, what is the real
-PrLD-positive rate by taxon — at a population level, not a bounded sample,
-and correcting for near-duplicate paralogs?*
-
-Pfam Clan CL0523 (Gag/capsid-like domains) is pulled in full — every matching
-UniProt entry, no per-domain cap, no subsampling — split into `te_capsid`
-(active retrotransposon Gag/capsid domains: TYA_Ty1, PEG10_N,
-Retrotran_gag_2/3, Ty5, Ty3) and `domesticated_host_gene` (Arc/PEG10/PNMA/RTL1
-— genes domesticated from an ancestral Gag capsid, no longer transposons).
-The latter is kept as a labeled reference/sanity-check panel — near-total
-mammal skew there is *expected* and confirms the classification, it isn't
-folded into the TE PrLD claim.
+Pulls every UniProt entry (no cap, no subsampling) in Pfam Clan CL0523, then
+rescores with PLAAC at three alphas and builds a cluster-corrected (MMseqs2)
+taxon×domain PrLD-rate heatmap to remove paralog pseudoreplication.
 
 ```bash
 python te_clan_pull.py --skip-fetch --verbose
@@ -134,53 +98,24 @@ python te_clan_plaac_rescore.py --alpha 0.5 --mode full --verbose   # repeat for
 python te_clan_taxon_heatmap.py --verbose
 ```
 
-PLAAC scoring is a separate script (`te_clan_plaac_rescore.py`, alpha ∈ {0,
-0.5, 1}) run against the ~155k unique accessions from the pull; `--mode
-benchmark` scores a seeded subset first, to validate throughput and
-reproduce known values before committing to the full run. The heatmap
-(`te_clan_taxon_heatmap.py`) reports PrLD-positive rate (not raw counts, which
-would mostly replot sampling skew) per taxon×domain cell, using one
-representative per MMseqs2 cluster (95% identity / 80% coverage) rather than
-raw rows — raw rows pseudoreplicate near-identical paralogs (e.g. ~40
-near-identical *S. cerevisiae* Ty1 copies inflating TYA_Ty1's raw rate).
-Cells with cluster-corrected n below `MIN_N` (default 20) are masked rather
-than shown as a spurious 0%/100%.
-
-**Interpretation:** this is the current best-supported taxon-level view of
-PrLD rate for this clan; see `data/results/clan_cl0523_taxon_prld_heatmap*.png`
-after running the three stages above.
-
-`data/results/clan_cl0523_bacterial_gag_hits.csv` is a follow-up sanity check,
-done ad hoc in a local Python/pandas shell (not saved as a script): the
-rescored, cluster-annotated clan table filtered to rows where
-`broad_group` is `Bacillati` or `Pseudomonadati` (bacterial) and `domain` is
-one of the `te_capsid` group (e.g. PEG10_N-capsid) — i.e. bacterial hits for
-a domain family that should be eukaryotic viral/TE in origin. Worth checking
-whether these are contamination, horizontal gene transfer, or UniProt
-misannotation before citing anything from this file; reproduce the filter
-above from `clan_cl0523_proteins_plaac_clustered.csv` if you need it again.
+**Interpretation:** the current best-supported taxon-level view of PrLD rate
+for this clan; see `data/results/clan_cl0523_taxon_prld_heatmap*.png`. (One
+follow-up file, `clan_cl0523_bacterial_gag_hits.csv`, was produced by an ad
+hoc filter, not a script — see [Open questions](#open-questions).)
 
 ## Stage 4 — Standalone prion benchmark
 
-*Question: does PLAAC actually recover known/suspected plant PrDs, independent
-of any TE screen, and how alpha-sensitive is the call?*
-
-`plant_prion_plaac_benchmark.py` scores three literature-validated
-prion/PrLD proteins — Arabidopsis ELF3 and LD, plus yeast Sup35 as a
-positive-control anchor — at alpha=0/0.5/1, and produces a combined
-per-residue-track + summary figure.
+Scores three literature-validated PrLD proteins (Arabidopsis ELF3 and LD,
+yeast Sup35) with PLAAC at three alphas, as an independent check that PLAAC
+recovers known PrDs.
 
 ```bash
 python plant_prion_plaac_benchmark.py --verbose
 ```
 
-**Result:** Sup35 and ELF3 call a PrD at all three alphas; LD only calls at
-alpha≥0.5. Given the alpha=0 caveat below (self-referential background on a
-3-protein FASTA), LD's is the least robust of the three calls, not evidence
-against it. EVD (ATCOPIA93) was scoped for inclusion but skipped: it has no
-UniProt entry and no annotated CDS/translation in GenBank, and hand-calling
-its Gag ORF boundary from raw genomic DNA isn't defensible without a citable
-source.
+**Result:** Sup35 and ELF3 call a PrD at all three alphas; LD only at
+alpha≥0.5 (its least robust call, not evidence against it). EVD (ATCOPIA93)
+was scoped but skipped — no UniProt entry or citable protein sequence exists.
 
 ## Methodology
 
@@ -225,8 +160,11 @@ exclude fragments and multi-domain outliers before PLAAC.
 - **EVD (ATCOPIA93)** protein sequence is unresolved and parked (Stage 4) —
   maps to TAIR locus AT5G17125, no UniProt entry, no annotated CDS.
 - **`clan_cl0523_bacterial_gag_hits.csv`** was produced by an ad hoc local
-  filter, not a checked-in script — see Stage 3 for the exact filter to
-  reproduce it.
+  filter (not a checked-in script) on `clan_cl0523_proteins_plaac_clustered.csv`:
+  `broad_group` in `{Bacillati, Pseudomonadati}` and `domain` in the
+  `te_capsid` group — bacterial hits for a domain family expected to be
+  eukaryotic viral/TE in origin, worth checking for contamination, HGT, or
+  misannotation before citing.
 
 ## AI disclaimer
 

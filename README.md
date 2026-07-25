@@ -13,16 +13,11 @@ built, since each stage's result is what motivated the next one.
 
 - Two pipelines coexist and are both still relevant: **bulk** (random
   sample across 6 TE-associated Pfam domains) and **clan** (full
-  population of one coherent Pfam clan, CL0523). They answer different
+  population of the gag Pfam clan, CL0523). They answer different
   questions — see Stages 1 and 3.
-- **No non-TE control-set comparison exists yet.** Every PrLD rate reported so
-  far is TE-only; there is nothing yet to compare it against. Despite the
-  branch name, `control-comparison` currently has no control-set code — that's
-  the open next step.
 - The one candidate "signal" found so far (CACTA rate elevated over other DNA
-  transposon families, Stage 1) has a known pseudoreplication caveat that
-  hasn't been resolved — see [Open questions](#open-questions).
-
+  transposon families, Stage 1) has a known pseudoreplication bias that
+  hasn't been resolved.
 ## Layout
 
 | Path | Stage | Purpose |
@@ -68,7 +63,7 @@ pool of up to `--fetch-pool` (default 500) matching UniProt entries, cache
 it, then randomly subsample `--per-domain` (default 100) proteins per domain
 using a seeded RNG so results are reproducible. Score every sampled protein
 with PLAAC (`alpha=0.5`, `core_length=60`; see [Methodology](#methodology)).
-`te_bulk_pull.py` also supports a second domain set restricted to
+`te_bulk_pull.py` is also used for a second domain set restricted to
 cut-and-paste DNA-transposon families (`--domain-set dna_transposon`) and an
 `--organism` filter to hold organism constant instead of sampling across
 taxonomy.
@@ -82,10 +77,9 @@ python te_bulk_analysis.py --verbose
 run (`--domain-set dna_transposon --organism "Arabidopsis thaliana"`) found
 CACTA's PrLD-positive rate (12.0%) sharply elevated over MULE (1.6%), hAT
 (1.0%), and PIF/Harbinger (0%) — Fisher's exact p≈4e-6. That result is not yet
-trustworthy (see [Open questions](#open-questions)), but the bounded,
-scattered-domain sampling design also made two other things hard to answer:
-whether taxonomic composition was confounding domain-level rates (→ Stage 2),
-and whether a random *subsample* was even the right unit when the underlying
+trustworthy due to pseudoreplication, and the scattered-domain sampling design also identified two more limitations:
+whether differences in PrLD rates across Pfam domains were true or confounded by taxonomic differneces of these Pfam domains (→ Stage 2),
+whether a random *subsample* was even the right unit when the underlying
 UniProt population per domain is small and unevenly distributed across taxa
 (→ Stage 3's full-population pivot).
 
@@ -97,7 +91,7 @@ mostly from Fungi)?*
 
 `te_taxon_analysis.py` reads the Stage 1 Excel output, looks up each
 accession's NCBI/UniProt lineage, classifies it into a broad group
-(Plant/Animal/Fungi/Virus/...) and, for animals, a finer subgroup, and writes
+(Plant/Animal/Fungi/Virus/...) and writes
 taxonomic composition, a domain×taxon crosstab, PrLD rate by taxon, and mean
 protein length by domain (a second confound check).
 
@@ -106,7 +100,7 @@ python te_taxon_analysis.py --verbose
 ```
 
 **Interpretation / pivot:** confirmed the bulk sample's taxonomic composition
-is uneven across domains — a real confound, not just a sampling curiosity.
+is uneven across domains.
 Fixing it by re-sampling within the same bounded-random design would still
 leave small, unevenly-populated domain/taxon cells. That's what motivated
 Stage 3: pull every matching UniProt entry for a domain family instead of a

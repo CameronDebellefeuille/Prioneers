@@ -5,7 +5,7 @@ Screens transposable element (TE)-encoded proteins for prion-like domains
 from UniProt by Pfam domain, score them with PLAAC, and report PrLD-positive
 rates.
 
-This project has gone through two "pull" strategies and a side benchmark as
+This project has gone through two "pull" strategies as
 the questions changed. This README walks through them in the order they were
 built, since each stage's result is what motivated the next one.
 
@@ -15,12 +15,8 @@ built, since each stage's result is what motivated the next one.
   sample across 6 scattered TE-associated Pfam domains) and **clan** (full
   population of one coherent Pfam clan, CL0523). They answer different
   questions — see Stages 1 and 3.
-- **No non-TE control-set comparison exists yet.** Every PrLD rate reported so
-  far is TE-only; there is nothing yet to compare it against. Despite the
-  branch name, `control-comparison` currently has no control-set code — that's
-  the open next step.
 - The one candidate "signal" found so far (CACTA rate elevated over other DNA
-  transposon families, Stage 1) has a known pseudoreplication caveat that
+  transposon families, Stage 1) has a known pseudoreplication bias that
   hasn't been resolved — see [Open questions](#open-questions).
 
 ## Layout
@@ -69,14 +65,12 @@ python te_bulk_analysis.py --verbose
 ```
 
 **Interpretation / pivot:** a DNA-transposon, *A. thaliana*-only run found
-CACTA's rate sharply elevated (12.0% vs. ≤1.6% for other families, p≈4e-6),
-but the bounded, scattered-domain design couldn't rule out taxonomic
-confounding or paralog pseudoreplication — motivating Stages 2 and 3.
+CACTA's rate sharply elevated (12.0% vs. ≤1.6% for other families, p≈4e-6), scattered-domain design couldn't rule out taxonomic confounding or paralog pseudoreplication which motivated Stages 2 and 3.
 
 ## Stage 2 — Taxon add-on
 
-Adds NCBI/UniProt taxonomic lineage to the Stage 1 output to check whether
-per-domain PrLD rates are actually a taxonomy effect in disguise.
+Adds UniProt taxonomic lineage to the Stage 1 output to check whether
+per-domain PrLD rates are actually due to differences in taxonomy instead of Pfam domain.
 
 ```bash
 python te_taxon_analysis.py --verbose
@@ -100,8 +94,7 @@ python te_clan_taxon_heatmap.py --verbose
 
 **Interpretation:** the current best-supported taxon-level view of PrLD rate
 for this clan; see `data/results/clan_cl0523_taxon_prld_heatmap*.png`. (One
-follow-up file, `clan_cl0523_bacterial_gag_hits.csv`, was produced by an ad
-hoc filter, not a script — see [Open questions](#open-questions).)
+follow-up file, `clan_cl0523_bacterial_gag_hits.csv`, was produced locally, not a script.
 
 ## Stage 4 — Standalone prion benchmark
 
@@ -136,31 +129,19 @@ PLAAC itself: http://plaac.wi.mit.edu/
   `PRDlen > 0` — an actual called domain, not just a nonzero score.
 
 **Pfam domains searched** (Stage 1, `TE_PFAM_DOMAINS` in `te_bulk_pull.py`):
-PF03732 (Gag), PF00078 (RT), PF00665 (Integrase), PF03004
-(Transposase_DDE), PF01498 (Transposase_IS4), PF03108 (Transposase_MULE).
-Each was spot-checked against UniProt to confirm it returns real TE proteins,
-not an unrelated gene family sharing the domain name. No reliable Pfam domain
+PF03732 (PEG10_N-capsid), PF00078 (Reverse transcriptase (RNA-dependent DNA polymerase)), PF00665 (Integrase core domain), PF03004
+(	Plant transposase (Ptta/En/Spm family)), PF01498 (HTH_Tnp_Tc3_2), PF03108 (DBD_Tnp_Mut).
+No reliable Pfam domain
 exists for Helitron Rep/helicase, so Helitrons are under-represented
 throughout. UniProt queries are constrained to `length:[50 TO 3000]` to
 exclude fragments and multi-domain outliers before PLAAC.
 
-## Open questions
+## Open questions/limitations
 
-- **No non-TE control-set comparison.** Every PrLD rate above is TE-only;
-  nothing to compare it against yet. This is presumably what
-  `control-comparison` should add.
-- **CACTA rate (Stage 1) needs clustering before it's trustworthy.** 73/133
-  CACTA entries share one generic auto-annotation name, and only 122/133 have
-  distinct 50-residue N-terminal prefixes — consistent with paralogous,
-  non-independent copies, not 133 independent samples. Cluster by sequence
-  identity (e.g. CD-HIT/MMseqs2, as already done for the Stage 3 clan pull)
-  before citing the 12.0%/p≈4e-6 figure.
-- **Helitrons are under-represented** across both pipelines (no usable Pfam
-  domain in UniProt).
 - **EVD (ATCOPIA93)** protein sequence is unresolved and parked (Stage 4) —
   maps to TAIR locus AT5G17125, no UniProt entry, no annotated CDS.
 - **`clan_cl0523_bacterial_gag_hits.csv`** was produced by an ad hoc local
-  filter (not a checked-in script) on `clan_cl0523_proteins_plaac_clustered.csv`:
+  filter on `clan_cl0523_proteins_plaac_clustered.csv`:
   `broad_group` in `{Bacillati, Pseudomonadati}` and `domain` in the
   `te_capsid` group — bacterial hits for a domain family expected to be
   eukaryotic viral/TE in origin, worth checking for contamination, HGT, or
